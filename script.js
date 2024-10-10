@@ -1,7 +1,7 @@
 const questions = [
     {
         question: "你喜歡獨處嗎？",
-        choices: ["喜歡", "還好", "不喜歡"],
+        choices: ["不喜歡", "還好", "喜歡"],
         scores: [3, 2, 1],
     },
     {
