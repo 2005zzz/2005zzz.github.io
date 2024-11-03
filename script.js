@@ -18,11 +18,10 @@ const questions = [
         question: "覺得累了選擇最佳的充電方式是什麼？",
         choices: ["找朋友出門玩", "我都行", "在家休息"],
         scores: [3, 2, 1],
-    }
-    ,
+    },
     {
         question: "面對陌生人時，你會有什麼樣的反應？",
-        choices: ["易開啟話題聊天","需一些時間適應","通常我不會主動"],
+        choices: ["易開啟話題聊天", "需一些時間適應", "通常我不會主動"],
         scores: [3, 2, 1],
     }
 ];
@@ -30,67 +29,115 @@ const questions = [
 let currentQuestionIndex = 0;
 let totalScore = 0;
 
-const questionElement = document.getElementById("question");
-const choicesElement = document.getElementById("choices");
-const nextButton = document.getElementById("next-btn");
-const resultContainer = document.getElementById("result-container");
-const resultElement = document.getElementById("result");
-const restartButton = document.getElementById("restart-btn");
-const quizContainer = document.getElementById("quiz-container");
+$(document).ready(function () {
+    const $question = $("#question");
+    const $choices = $("#choices");
+    const $nextButton = $("#next-btn");
+    const $resultContainer = $("#result-container");
+    const $result = $("#result");
+    const $restartButton = $("#restart-btn");
+    const $quizContainer = $("#quiz-container");
 
-// 載入當前問題
-function loadQuestion() {
-    const currentQuestion = questions[currentQuestionIndex];
-    questionElement.textContent = currentQuestion.question;
-    choicesElement.innerHTML = ""; // 清空舊的選項
-       
-    currentQuestion.choices.forEach((choice, index) => {
-        const button = document.createElement("button");
-        button.textContent = choice;
-        button.addEventListener("click", () => selectChoice(index)); // 設定按鈕的點擊事件
-        choicesElement.appendChild(button);
+    // 新增返回上一題按鈕
+    const $prevButton = $("<button>").text("返回上一題").css({
+        backgroundColor: "white",
+        color: "black",
+        border: "1px solid black",
+        padding: "10px",
+        margin: "10px 0" // 上下間距
+    }).hide(); // 初始隱藏
+
+    // 載入當前問題
+    function loadQuestion() {
+        const currentQuestion = questions[currentQuestionIndex];
+        $question.text(currentQuestion.question);
+        $choices.empty(); // 清空舊的選項
+
+        currentQuestion.choices.forEach((choice, index) => {
+            const $button = $("<button>").text(choice);
+            $button.on("click", function () {
+                $choices.find("button").removeClass("selected");
+                $(this).addClass("selected animate"); // 加上選擇效果
+                selectChoice(index);
+            });
+            $choices.append($button);
+        });
+
+        // 滑動顯示問題
+        $quizContainer.slideDown(); 
+
+        // 根據當前問題顯示或隱藏返回按鈕
+        $prevButton.toggle(currentQuestionIndex > 0);
+    }
+
+    // 處理選擇
+    function selectChoice(choiceIndex) {
+        totalScore += questions[currentQuestionIndex].scores[choiceIndex];
+        currentQuestionIndex++;
+
+        // 淡出當前問題
+        $quizContainer.fadeOut(function () {
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion(); // 載入下一題
+            } else {
+                showResult(); // 顯示結果
+            }
+        });
+    }
+
+    // 根據分數返回描述
+    function getResultDescription(score) {
+        if (score >= 12) {
+            return "你比較外向，可能是e人喔！";
+        } else if (score >= 9) {
+            return "你是外向與內向之間的人，可e可i~";
+        } else {
+            return "你比較內向，大概率是i人喔！";
+        }
+    }
+
+    // 顯示測驗結果
+    function showResult() {
+        const description = getResultDescription(totalScore);
+        $result.text(description);
+
+        $resultContainer.fadeIn();
+        // 滾動至結果區域
+        $("html, body").animate({
+            scrollTop: $resultContainer.offset().top
+        }, 1000); 
+    }
+
+    // 返回上一題
+    $prevButton.on("click", function () {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            totalScore -= questions[currentQuestionIndex].scores.find((score, index) => {
+                return $choices.children().eq(index).hasClass("selected");
+            }) || 0; // 從總分中扣除選中的分數
+            loadQuestion();
+        }
     });
-}
 
-// 處理選擇
-function selectChoice(choiceIndex) {
-    totalScore += questions[currentQuestionIndex].scores[choiceIndex]; // 計算分數
-    currentQuestionIndex++;
+    // 重啟測驗
+    $restartButton.on("click", function () {
+        totalScore = 0;
+        currentQuestionIndex = 0;
+        $resultContainer.fadeOut(function () {
+            loadQuestion(); // 載入第一題
+        });
+    });
 
-    if (currentQuestionIndex < questions.length) {
-        loadQuestion(); // 載入下一題
-    } else {
-        showResult(); // 顯示結果
-    }
-}
+    // 初始化測驗
+    loadQuestion();
 
-// 根據分數返回描述
-function getResultDescription(score) {
-    if (score >= 12) {
-        return "你比較外向，可能是e人喔！";
-    } else if (score >= 9) {
-        return "你是外向與內向之間的人，可e可i~";
-    } else {
-        return "你比較內向，大概率是i人喔！";
-    }
-}
+    // 加入返回上一題按鈕到選項區
+    $choices.after($prevButton);
 
-// 顯示測驗結果
-function showResult() {
-    quizContainer.style.display = "none"; // 隱藏測驗容器
-    resultContainer.style.display = "block"; // 顯示結果容器
-    const description = getResultDescription(totalScore); // 獲取描述
-    resultElement.textContent = `${description}`; // 顯示分數和描述
-}
-
-// 事件監聽
-restartButton.addEventListener("click", () => {
-    totalScore = 0; // 重置分數
-    currentQuestionIndex = 0; // 重置問題索引
-    quizContainer.style.display = "block"; // 顯示測驗容器
-    resultContainer.style.display = "none"; // 隱藏結果容器
-    loadQuestion(); // 載入第一題
+    // 按鈕點擊效果
+    $(document).on("mousedown", "button", function() {
+        $(this).addClass("clicked");
+    }).on("mouseup", "button", function() {
+        $(this).removeClass("clicked");
+    });
 });
-
-// 初始化測驗
-loadQuestion();
